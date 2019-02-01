@@ -3,7 +3,7 @@ import cv2
 import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d
 from mpl_toolkits.mplot3d import Axes3D
-  
+
 def show_2d(img, points, c, edges):
   num_joints = points.shape[0]
   points = ((points.reshape(num_joints, -1))).astype(np.int32)
@@ -15,8 +15,8 @@ def show_2d(img, points, c, edges):
                     (points[e[1], 0], points[e[1], 1]), c, 2)
   return img
 
-mpii_edges = [[0, 1], [1, 2], [2, 6], [6, 3], [3, 4], [4, 5], 
-              [10, 11], [11, 12], [12, 8], [8, 13], [13, 14], [14, 15], 
+mpii_edges = [[0, 1], [1, 2], [2, 6], [6, 3], [3, 4], [4, 5],
+              [10, 11], [11, 12], [12, 8], [8, 13], [13, 14], [14, 15],
               [6, 8], [8, 9]]
 
 class Debugger(object):
@@ -32,9 +32,9 @@ class Debugger(object):
     self.xmin, self.ymin, self.zmin = oo, oo, oo
     self.imgs = {}
     self.edges=edges
-    
 
-  
+
+
   def add_point_3d(self, points, c='b', marker='o', edges=None):
     if edges == None:
       edges = self.edges
@@ -56,7 +56,7 @@ class Debugger(object):
     self.ax.scatter(x, y, z, s = 200, c = c, marker = marker)
     for e in edges:
       self.ax.plot(x[e], y[e], z[e], c = c)
-    
+
   def show_3d(self):
     max_range = np.array([self.xmax-self.xmin, self.ymax-self.ymin, self.zmax-self.zmin]).max()
     Xb = 0.5*max_range*np.mgrid[-1:2:2,-1:2:2,-1:2:2][0].flatten() + 0.5*(self.xmax+self.xmin)
@@ -64,29 +64,32 @@ class Debugger(object):
     Zb = 0.5*max_range*np.mgrid[-1:2:2,-1:2:2,-1:2:2][2].flatten() + 0.5*(self.zmax+self.zmin)
     for xb, yb, zb in zip(Xb, Yb, Zb):
       self.ax.plot([xb], [yb], [zb], 'w')
+    #  plt.savefig('output.jpg', self.ax)
     self.plt.show()
-    
+
   def add_img(self, img, imgId = 'default'):
     self.imgs[imgId] = img.copy()
-  
+
   def add_mask(self, mask, bg, imgId = 'default', trans = 0.8):
     self.imgs[imgId] = (mask.reshape(mask.shape[0], mask.shape[1], 1) * 255 * trans + \
                         bg * (1 - trans)).astype(np.uint8)
 
   def add_point_2d(self, point, c, imgId='default'):
     self.imgs[imgId] = show_2d(self.imgs[imgId], point, c, self.edges)
-  
+
   def show_img(self, pause = False, imgId = 'default'):
     cv2.imshow('{}'.format(imgId), self.imgs[imgId])
     if pause:
       cv2.waitKey()
-  
+
   def show_all_imgs(self, pause = False):
     if not self.ipynb:
+
       for i, v in self.imgs.items():
         cv2.imshow('{}'.format(i), v)
       if pause:
-        cv2.waitKey()
+        cv2.waitKey(1000)
+      #  self.plt.savefig('all_image.jpg')
     else:
       self.ax = None
       nImgs = len(self.imgs)
@@ -100,7 +103,7 @@ class Debugger(object):
         else:
           plt.imshow(v)
       plt.show()
-  
+
   def save_3d(self, path):
     max_range = np.array([self.xmax-self.xmin, self.ymax-self.ymin, self.zmax-self.zmin]).max()
     Xb = 0.5*max_range*np.mgrid[-1:2:2,-1:2:2,-1:2:2][0].flatten() + 0.5*(self.xmax+self.xmin)
@@ -108,12 +111,26 @@ class Debugger(object):
     Zb = 0.5*max_range*np.mgrid[-1:2:2,-1:2:2,-1:2:2][2].flatten() + 0.5*(self.zmax+self.zmin)
     for xb, yb, zb in zip(Xb, Yb, Zb):
       self.ax.plot([xb], [yb], [zb], 'w')
+
     self.plt.savefig(path, bbox_inches='tight', frameon = False)
-  
+
+    ##################### 图片合并
+    #  import pdb;pdb.set_trace()
+    img_3d = plt.imread(path)
+    figs = plt.figure()
+    ax1 = figs.add_subplot(1,2,1)
+    ax1.imshow(self.imgs['default'])
+
+    ax2 = figs.add_subplot(1,2,2)
+    ax2.imshow(img_3d)
+    plt.show()
+    cv2.waitKey(1000)
+    plt.savefig(path)
+
   def save_img(self, imgId = 'default', path = '../debug/'):
     cv2.imwrite(path + '{}.png'.format(imgId), self.imgs[imgId])
-    
+
   def save_all_imgs(self, path = '../debug/'):
     for i, v in self.imgs.items():
       cv2.imwrite(path + '/{}.png'.format(i), v)
-    
+

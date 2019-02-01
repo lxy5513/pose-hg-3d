@@ -6,6 +6,8 @@ import _init_paths
 
 import os
 
+import matplotlib
+matplotlib.use('Agg')
 import cv2
 import numpy as np
 import torch
@@ -25,7 +27,7 @@ def is_image(file_name):
   return ext in image_ext
 
 
-def demo_image(image, model, opt):
+def demo_image(image, model, opt, save_path=None):
   s = max(image.shape[0], image.shape[1]) * 1.0
   c = np.array([image.shape[1] / 2., image.shape[0] / 2.], dtype=np.float32)
   trans_input = get_affine_transform(
@@ -38,15 +40,18 @@ def demo_image(image, model, opt):
   out = model(inp)[-1]
   pred = get_preds(out['hm'].detach().cpu().numpy())[0]
   pred = transform_preds(pred, c, s, (opt.output_w, opt.output_h))
-  pred_3d = get_preds_3d(out['hm'].detach().cpu().numpy(), 
+  pred_3d = get_preds_3d(out['hm'].detach().cpu().numpy(),
                          out['depth'].detach().cpu().numpy())[0]
-  
+
   debugger = Debugger()
   debugger.add_img(image)
   debugger.add_point_2d(pred, (255, 0, 0))
   debugger.add_point_3d(pred_3d, 'b')
-  debugger.show_all_imgs(pause=False)
+  #  import pdb;pdb.set_trace()
+  debugger.show_all_imgs(pause=True)
   debugger.show_3d()
+  if save_path:
+    debugger.save_3d(save_path)
 
 def main(opt):
   opt.heads['depth'] = opt.num_output
@@ -56,7 +61,7 @@ def main(opt):
     opt.device = torch.device('cuda:{}'.format(opt.gpus[0]))
   else:
     opt.device = torch.device('cpu')
-  
+
   model, _, _ = create_model(opt)
   model = model.to(opt.device)
   model.eval()
@@ -68,12 +73,14 @@ def main(opt):
         image_name = os.path.join(opt.demo, file_name)
         print('Running {} ...'.format(image_name))
         image = cv2.imread(image_name)
-        demo_image(image, model, opt)
+        save_path = '3D_' + file_name
+        print('save image in ', save_path)
+        demo_image(image, model, opt, save_path)
   elif is_image(opt.demo):
     print('Running {} ...'.format(opt.demo))
     image = cv2.imread(opt.demo)
     demo_image(image, model, opt)
-    
+
 
 if __name__ == '__main__':
   opt = opts().parse()
